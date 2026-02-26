@@ -314,6 +314,18 @@ create_analysis_main_panel <- function() {
 create_sidebar_panel <- function() {
   sidebarPanel(
     width = 3,
+    h4("📥 Импорт данных"),
+    fileInput(
+      "upload_data_file",
+      "Загрузите Excel (.xlsx)",
+      accept = c(".xlsx")
+    ),
+    actionButton("reset_default_data", "Использовать встроенные данные", class = "btn-default", style = "width: 100%; margin-bottom: 8px;"),
+    downloadButton("download_active_data", "Скачать текущие исходные данные", class = "btn-info", style = "width: 100%;"),
+    br(), br(),
+    textOutput("data_source_info"),
+
+    hr(),
     selectInput("species", "Выберите вид:",
                 choices = sort(unique(data$species)),
                 selected = unique(data$species)[1]),

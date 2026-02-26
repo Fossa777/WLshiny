@@ -35,44 +35,57 @@ source_grouping_functions()
 
 # ------------- ЗАГРУЖАЕМ ДАННЫЕ -------------------------------------------
 
-Species10_start <- read_excel("10year2026.xlsx")
+prepare_species_data <- function(df) {
+  required_cols <- c("species", "length", "weight")
+  missing_cols <- setdiff(required_cols, colnames(df))
 
-Species10_start$Family <- as.factor(Species10_start$Family)
-Species10_start$species <- as.factor(Species10_start$species)
-Species10_start$Salt <- as.factor(Species10_start$Salt)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Отсутствуют обязательные колонки: ", paste(missing_cols, collapse = ", ")))
+  }
 
-# УДАЛЕНИЕ ВИДОВ С МЕНЕЕ 6 ТОЧЕК ДО ФИЛЬТРАЦИИ
-Species10_start <- Species10_start %>%
-  filter(
-    !is.na(species),
-    !is.na(weight),
-    !is.na(length),
-    weight > 0,
-    length > 0
+  if ("Family" %in% colnames(df)) df$Family <- as.factor(df$Family)
+  if ("species" %in% colnames(df)) df$species <- as.factor(df$species)
+  if ("Salt" %in% colnames(df)) df$Salt <- as.factor(df$Salt)
+
+  df <- df %>%
+    filter(
+      !is.na(species),
+      !is.na(weight),
+      !is.na(length),
+      weight > 0,
+      length > 0
+    )
+
+  species_counts_local <- df %>%
+    group_by(species) %>%
+    summarise(n_points = n(), .groups = "drop")
+
+  species_to_keep_local <- species_counts_local %>%
+    filter(n_points >= 7) %>%
+    pull(species)
+
+  filtered_df <- df %>%
+    filter(species %in% species_to_keep_local) %>%
+    mutate(
+      logW = log(weight),
+      logL = log(length)
+    )
+
+  list(
+    data = filtered_df,
+    species_counts = species_counts_local,
+    species_to_keep = species_to_keep_local
   )
+}
 
-species_counts <- Species10_start %>%
-  group_by(species) %>%
-  summarise(n_points = n()) %>%
-  ungroup()
-
-species_to_keep <- species_counts %>%
-  filter(n_points >= 7) %>%
-  pull(species)
-
-Species10_start <- Species10_start %>%
-  filter(species %in% species_to_keep)
+initial_loaded <- prepare_species_data(read_excel("10year2026.xlsx"))
+Species10 <- initial_loaded$data
+species_counts <- initial_loaded$species_counts
+species_to_keep <- initial_loaded$species_to_keep
 
 cat("=== ФИЛЬТРАЦИЯ ВИДОВ ПО КОЛИЧЕСТВУ ТОЧКИ ===\n")
 cat("Исходное количество видов:", length(unique(species_counts$species)), "\n")
 cat("Видов после фильтрации (≥7 точек):", length(species_to_keep), "\n")
-
-# Продолжаем стандартную обработку
-Species10 <- Species10_start %>%
-  mutate(
-    logW = log(weight),
-    logL = log(length)
-  )
 
 # Загружаем данные
 data <- Species10
@@ -102,8 +115,68 @@ server <- function(input, output, session) {
     multi_groups = integer(0)
   )
 
+  current_data <- reactiveVal(data)
+  current_source_name <- reactiveVal("Встроенный файл: 10year2026.xlsx")
 
-  
+  observeEvent(input$upload_data_file, {
+    req(input$upload_data_file)
+
+    tryCatch({
+      uploaded_raw <- read_excel(input$upload_data_file$datapath)
+      prepared_uploaded <- prepare_species_data(uploaded_raw)
+
+      if (nrow(prepared_uploaded$data) == 0) {
+        stop("После фильтрации не осталось данных (нужно минимум 7 наблюдений на вид).")
+      }
+
+      current_data(prepared_uploaded$data)
+      current_source_name(paste0("Пользовательский файл: ", input$upload_data_file$name))
+
+      clean_all_results$result <- NULL
+      clean_all_results$timestamp <- NULL
+      clean_all_results$gap_filtered <- NULL
+      clean_all_results$gap_diagnostics <- NULL
+
+      species_list <- sort(unique(prepared_uploaded$data$species))
+      updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
+
+      showNotification("✅ Данные успешно загружены. Используется пользовательский Excel.", type = "message", duration = 5)
+    }, error = function(e) {
+      showNotification(paste("❌ Ошибка загрузки файла:", e$message), type = "error", duration = 8)
+    })
+  })
+
+  observeEvent(input$reset_default_data, {
+    current_data(data)
+    current_source_name("Встроенный файл: 10year2026.xlsx")
+
+    clean_all_results$result <- NULL
+    clean_all_results$timestamp <- NULL
+    clean_all_results$gap_filtered <- NULL
+    clean_all_results$gap_diagnostics <- NULL
+
+    species_list <- sort(unique(current_data()$species))
+    updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
+
+    showNotification("ℹ️ Возвращены встроенные данные из 10year2026.xlsx.", type = "message", duration = 4)
+  })
+
+  output$data_source_info <- renderText({
+    paste0("Источник данных: ", current_source_name(), " | строк: ", nrow(current_data()), " | видов: ", length(unique(current_data()$species)))
+  })
+
+  output$download_active_data <- downloadHandler(
+    filename = function() {
+      paste0("исходные_данные_", Sys.Date(), ".xlsx")
+    },
+    content = function(file) {
+      wb <- createWorkbook()
+      addWorksheet(wb, "Данные")
+      writeData(wb, "Данные", current_data())
+      saveWorkbook(wb, file, overwrite = TRUE)
+    }
+  )
+
 output$download_cleaned_btn1 <- downloadHandler(
   filename = function() {
     paste0("очищенные_данные_", Sys.Date(), ".xlsx")
@@ -1021,7 +1094,7 @@ observeEvent(input$export_groups, {
   
     species_data <- reactive({
       req(input$species)
-      data %>% 
+      current_data() %>% 
         filter(species == input$species) %>%
         arrange(length)
     })
@@ -1256,7 +1329,7 @@ cleaned_data_for_comparison <- reactive({
       tryCatch({
         # 1. Очистка выбросов
         result <- clean_all_species_correct(  
-          data = data,
+          data = current_data(),
           final_threshold = input$clean_final2,
           min_final_n = input$min_final_n,
           verbose = TRUE
@@ -1458,14 +1531,14 @@ output$gap_calculation_RESULT <- renderPrint({
     
     # Навигация по видам
     observeEvent(input$next_species, {
-      species_list <- sort(unique(data$species))
+      species_list <- sort(unique(current_data()$species))
       current <- which(species_list == input$species)
       next_idx <- ifelse(current < length(species_list), current + 1, 1)
       updateSelectInput(session, "species", selected = species_list[next_idx])
     })
     
     observeEvent(input$prev_species, {
-      species_list <- sort(unique(data$species))
+      species_list <- sort(unique(current_data()$species))
       current <- which(species_list == input$species)
       prev_idx <- ifelse(current > 1, current - 1, length(species_list))
       updateSelectInput(session, "species", selected = species_list[prev_idx])
