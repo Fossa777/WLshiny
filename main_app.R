@@ -36,7 +36,7 @@ source_grouping_functions()
 # ------------- ЗАГРУЖАЕМ ДАННЫЕ -------------------------------------------
 
 prepare_species_data <- function(df) {
-  required_cols <- c("species", "length", "weight")
+  required_cols <- c("species", "species_name_ru", "length", "weight", "maxlength")
   missing_cols <- setdiff(required_cols, colnames(df))
 
   if (length(missing_cols) > 0) {
@@ -52,8 +52,10 @@ prepare_species_data <- function(df) {
       !is.na(species),
       !is.na(weight),
       !is.na(length),
+      !is.na(maxlength),
       weight > 0,
-      length > 0
+      length > 0,
+      maxlength > 0
     )
 
   species_counts_local <- df %>%
