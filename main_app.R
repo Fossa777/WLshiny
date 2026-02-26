@@ -191,28 +191,120 @@ server <- function(input, output, session) {
       )
     }
   })
-
   observe({
     tr <- i18n()
-    updateActionButton(session, "reset_default_data", label = tr$labels$reset)
+
+    # Основные контролы анализа
     updateSelectInput(session, "species", label = tr$labels$species)
+    updateActionButton(session, "reset_default_data", label = tr$labels$reset)
     updateActionButton(session, "next_species", label = tr$labels$next_label)
     updateActionButton(session, "prev_species", label = tr$labels$prev_label)
     updateActionButton(session, "highlight_outliers", label = tr$labels$highlight)
+
+    # Анализ видов
     updateSliderInput(session, "point_size", label = tr$labels$point_size)
     updateSliderInput(session, "line_size", label = tr$labels$line_size)
     updateSliderInput(session, "alpha", label = tr$labels$alpha)
-    updateSliderInput(session, "clean_final2", label = tr$labels$clean_final2)
-    updateNumericInput(session, "min_final_n", label = tr$labels$min_final_n)
-    updateSelectInput(session, "clean_model2", label = tr$labels$clean_model2)
-    updateActionButton(session, "clean_all2", label = tr$labels$clean_all2)
     updateSliderInput(session, "ribbon_percent", label = tr$labels$ribbon_percent)
     updateSliderInput(session, "ribbon_alpha", label = tr$labels$ribbon_alpha)
     updateSelectInput(session, "ribbon_model", label = tr$labels$ribbon_model)
-    shinyWidgets::updatePrettyCheckbox(session, "show_ribbon", label = tr$labels$show_ribbon)
-    shinyWidgets::updatePrettyCheckbox(session, "show_points", label = tr$labels$show_points)
-    shinyWidgets::updatePrettyCheckbox(session, "show_power", label = tr$labels$show_power)
-    shinyWidgets::updatePrettyCheckbox(session, "show_exp", label = tr$labels$show_exp)
+    updateCheckboxInput(session, "show_ribbon", label = tr$labels$show_ribbon)
+    updateCheckboxInput(session, "show_points", label = tr$labels$show_points)
+    updateCheckboxInput(session, "show_power", label = tr$labels$show_power)
+    updateCheckboxInput(session, "show_exp", label = tr$labels$show_exp)
+
+    # Очистка
+    updateSelectInput(session, "clean_model2", label = tr$labels$clean_model2)
+    updateSliderInput(session, "clean_final2", label = tr$labels$clean_final2)
+    updateSliderInput(session, "min_final_n", label = tr$labels$min_final_n)
+    updateActionButton(session, "clean_all2", label = tr$labels$clean_all2)
+
+    # Прочие вкладки (основные элементы)
+    updateSliderInput(session, "compare_ribbon_percent", label = if (identical(input$ui_lang, "en")) "Confidence band width (%)" else "Ширина доверительной полосы (%)")
+    updateActionButton(session, "run_grouping", label = if (identical(input$ui_lang, "en")) "Run grouping" else "Запустить группировку")
+    updateActionButton(session, "group_prev", label = if (identical(input$ui_lang, "en")) "◀ Previous" else "◀ Предыдущая")
+    updateActionButton(session, "group_next", label = if (identical(input$ui_lang, "en")) "Next ▶" else "Следующая ▶")
+    updateActionButton(session, "export_groups", label = if (identical(input$ui_lang, "en")) "Export to Excel" else "Экспорт в Excel")
+    updateActionButton(session, "export_grid", label = if (identical(input$ui_lang, "en")) "📁 Export grid" else "📁 Экспортировать сетку")
+    updateActionButton(session, "export_individual", label = if (identical(input$ui_lang, "en")) "📁 Export separately" else "📁 Экспортировать отдельно")
+    updateActionButton(session, "preview_grid", label = if (identical(input$ui_lang, "en")) "👁 Refresh preview" else "👁 Обновить предпросмотр")
+    updateDownloadButton(session, "download_export_plot", label = if (identical(input$ui_lang, "en")) "Download current preview" else "Скачать текущий предпросмотр")
+    updateActionButton(session, "main_overall_select_all", label = if (identical(input$ui_lang, "en")) "Select all" else "Выбрать все")
+    updateActionButton(session, "main_overall_clear_all", label = if (identical(input$ui_lang, "en")) "Clear" else "Очистить")
+    updateActionButton(session, "main_overall_export", label = if (identical(input$ui_lang, "en")) "📁 Export plot" else "📁 Экспортировать график")
+
+    # Перевод заголовков вкладок/блоков через JS
+    if (identical(input$ui_lang, "en")) {
+      shinyjs::runjs("$(\"a[data-value=\'Анализ видов\']\").text(\'Species analysis\');")
+      shinyjs::runjs("$(\"a[data-value=\'Очистка данных\']\").text(\'Data cleaning\');")
+      shinyjs::runjs("$(\"a[data-value=\'Сравнение до/после\']\").text(\'Before/after comparison\');")
+      shinyjs::runjs("$(\"a[data-value=\'Группировка видов\']\").text(\'Species grouping\');")
+      shinyjs::runjs("$(\"a[data-value=\'Экспорт графиков\']\").text(\'Plot export\');")
+      shinyjs::runjs("$(\"a[data-value=\'Общий график\']\").text(\'Overall plot\');")
+    } else {
+      shinyjs::runjs("$(\"a[data-value=\'Species analysis\']\").text(\'Анализ видов\');")
+      shinyjs::runjs("$(\"a[data-value=\'Data cleaning\']\").text(\'Очистка данных\');")
+      shinyjs::runjs("$(\"a[data-value=\'Before/after comparison\']\").text(\'Сравнение до/после\');")
+      shinyjs::runjs("$(\"a[data-value=\'Species grouping\']\").text(\'Группировка видов\');")
+      shinyjs::runjs("$(\"a[data-value=\'Plot export\']\").text(\'Экспорт графиков\');")
+      shinyjs::runjs("$(\"a[data-value=\'Overall plot\']\").text(\'Общий график\');")
+    }
+  })
+
+  output$readme_content <- renderUI({
+    if (identical(input$ui_lang, "en")) {
+      tagList(
+        tags$p("The app can work with built-in demo data (default) or your own Excel file (.xlsx)."),
+        tags$p("For successful upload and processing, your table must include these required columns:"),
+        tags$ul(
+          tags$li(tags$b("species"), " — species latin name (text)."),
+          tags$li(tags$b("species_name_ru"), " — local/common species name (text)."),
+          tags$li(tags$b("length"), " — fish length (numeric > 0)."),
+          tags$li(tags$b("weight"), " — fish weight (numeric > 0)."),
+          tags$li(tags$b("maxlength"), " — species maximum SL length (numeric > 0).")
+        ),
+        tags$hr(),
+        tags$h4("Recommended optional columns"),
+        tags$ul(
+          tags$li(tags$b("Family"), " — family (text)."),
+          tags$li(tags$b("Salt"), " — salinity/water type (text).")
+        ),
+        tags$hr(),
+        tags$h4("Important processing rules"),
+        tags$ul(
+          tags$li("The file must be in .xlsx format."),
+          tags$li("Column names must match exactly: species, species_name_ru, length, weight, maxlength."),
+          tags$li("Rows with missing or non-positive length/weight/maxlength are removed automatically."),
+          tags$li("After filtering, each species must have at least 7 observations, otherwise it is excluded.")
+        )
+      )
+    } else {
+      tagList(
+        tags$p("Приложение может работать со встроенными данными (по умолчанию) или с вашим Excel-файлом (.xlsx)."),
+        tags$p("Чтобы загрузка и обработка прошли успешно, в таблице должны быть следующие обязательные столбцы:"),
+        tags$ul(
+          tags$li(tags$b("species"), " — название вида (текст/строка)."),
+          tags$li(tags$b("species_name_ru"), " — местное/русское название вида (текст/строка)."),
+          tags$li(tags$b("length"), " — длина рыбы (число > 0)."),
+          tags$li(tags$b("weight"), " — масса рыбы (число > 0)."),
+          tags$li(tags$b("maxlength"), " — максимальная длина SL для вида (число > 0).")
+        ),
+        tags$hr(),
+        tags$h4("Рекомендуемые дополнительные столбцы"),
+        tags$ul(
+          tags$li(tags$b("Family"), " — семейство (текст)."),
+          tags$li(tags$b("Salt"), " — солёность/тип воды (текст, категориальный признак).")
+        ),
+        tags$hr(),
+        tags$h4("Важные условия обработки"),
+        tags$ul(
+          tags$li("Файл должен быть в формате .xlsx."),
+          tags$li("Столбцы species, species_name_ru, length, weight, maxlength должны называться точно так же."),
+          tags$li("Строки с пустыми значениями и нечисловыми/неположительными length, weight или maxlength удаляются автоматически."),
+          tags$li("Для каждого вида после фильтрации должно остаться не менее 7 наблюдений, иначе вид исключается из анализа.")
+        )
+      )
+    }
   })
 
   observeEvent(input$upload_data_file, {
