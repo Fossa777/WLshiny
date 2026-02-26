@@ -35,44 +35,59 @@ source_grouping_functions()
 
 # ------------- ЗАГРУЖАЕМ ДАННЫЕ -------------------------------------------
 
-Species10_start <- read_excel("10year2026.xlsx")
+prepare_species_data <- function(df) {
+  required_cols <- c("species", "species_name_ru", "length", "weight", "maxlength")
+  missing_cols <- setdiff(required_cols, colnames(df))
 
-Species10_start$Family <- as.factor(Species10_start$Family)
-Species10_start$species <- as.factor(Species10_start$species)
-Species10_start$Salt <- as.factor(Species10_start$Salt)
+  if (length(missing_cols) > 0) {
+    stop(paste0("Отсутствуют обязательные колонки: ", paste(missing_cols, collapse = ", ")))
+  }
 
-# УДАЛЕНИЕ ВИДОВ С МЕНЕЕ 6 ТОЧЕК ДО ФИЛЬТРАЦИИ
-Species10_start <- Species10_start %>%
-  filter(
-    !is.na(species),
-    !is.na(weight),
-    !is.na(length),
-    weight > 0,
-    length > 0
+  if ("Family" %in% colnames(df)) df$Family <- as.factor(df$Family)
+  if ("species" %in% colnames(df)) df$species <- as.factor(df$species)
+  if ("Salt" %in% colnames(df)) df$Salt <- as.factor(df$Salt)
+
+  df <- df %>%
+    filter(
+      !is.na(species),
+      !is.na(weight),
+      !is.na(length),
+      !is.na(maxlength),
+      weight > 0,
+      length > 0,
+      maxlength > 0
+    )
+
+  species_counts_local <- df %>%
+    group_by(species) %>%
+    summarise(n_points = n(), .groups = "drop")
+
+  species_to_keep_local <- species_counts_local %>%
+    filter(n_points >= 7) %>%
+    pull(species)
+
+  filtered_df <- df %>%
+    filter(species %in% species_to_keep_local) %>%
+    mutate(
+      logW = log(weight),
+      logL = log(length)
+    )
+
+  list(
+    data = filtered_df,
+    species_counts = species_counts_local,
+    species_to_keep = species_to_keep_local
   )
+}
 
-species_counts <- Species10_start %>%
-  group_by(species) %>%
-  summarise(n_points = n()) %>%
-  ungroup()
-
-species_to_keep <- species_counts %>%
-  filter(n_points >= 7) %>%
-  pull(species)
-
-Species10_start <- Species10_start %>%
-  filter(species %in% species_to_keep)
+initial_loaded <- prepare_species_data(read_excel("10year2026.xlsx"))
+Species10 <- initial_loaded$data
+species_counts <- initial_loaded$species_counts
+species_to_keep <- initial_loaded$species_to_keep
 
 cat("=== ФИЛЬТРАЦИЯ ВИДОВ ПО КОЛИЧЕСТВУ ТОЧКИ ===\n")
 cat("Исходное количество видов:", length(unique(species_counts$species)), "\n")
 cat("Видов после фильтрации (≥7 точек):", length(species_to_keep), "\n")
-
-# Продолжаем стандартную обработку
-Species10 <- Species10_start %>%
-  mutate(
-    logW = log(weight),
-    logL = log(length)
-  )
 
 # Загружаем данные
 data <- Species10
@@ -102,8 +117,164 @@ server <- function(input, output, session) {
     multi_groups = integer(0)
   )
 
+  current_data <- reactiveVal(data)
+  current_source_name <- reactiveVal("Встроенный файл: 10year2026.xlsx")
 
-  
+  i18n <- reactive({
+    if (identical(input$ui_lang, "en")) {
+      list(
+        source_prefix = "Data source",
+        built_in = "Built-in file: 10year2026.xlsx",
+        uploaded_prefix = "User file",
+        rows = "rows",
+        species = "species",
+        upload_ok = "✅ Data uploaded successfully. Using user Excel file.",
+        upload_err = "❌ File upload error:",
+        reset_msg = "ℹ️ Switched back to built-in data from 10year2026.xlsx.",
+        labels = list(
+          upload = "Upload Excel (.xlsx)",
+          reset = "Use built-in data",
+          download = "Download current source data",
+          species = "Select species:",
+          next = "➡️Next species",
+          prev = "⬅️Previous species",
+          highlight = "Highlight outliers",
+          point_size = "Point size:",
+          line_size = "Line width:",
+          alpha = "Point alpha:",
+          clean_final2 = "Final threshold:",
+          min_final_n = "Min points after cleaning:",
+          clean_model2 = "Cleaning model:",
+          clean_all2 = "Run cleaning",
+          ribbon_percent = "Confidence band width (%):",
+          ribbon_alpha = "Band transparency:",
+          ribbon_model = "Model for band:",
+          show_ribbon = "Show confidence band",
+          show_points = "Show points",
+          show_power = "Show power model",
+          show_exp = "Show exponential model"
+        )
+      )
+    } else {
+      list(
+        source_prefix = "Источник данных",
+        built_in = "Встроенный файл: 10year2026.xlsx",
+        uploaded_prefix = "Пользовательский файл",
+        rows = "строк",
+        species = "видов",
+        upload_ok = "✅ Данные успешно загружены. Используется пользовательский Excel.",
+        upload_err = "❌ Ошибка загрузки файла:",
+        reset_msg = "ℹ️ Возвращены встроенные данные из 10year2026.xlsx.",
+        labels = list(
+          upload = "Загрузите Excel (.xlsx)",
+          reset = "Использовать встроенные данные",
+          download = "Скачать текущие исходные данные",
+          species = "Выберите вид:",
+          next = "➡️Следующий вид",
+          prev = "⬅️Предыдущий вид",
+          highlight = "Подсветить выбросы",
+          point_size = "Размер точек:",
+          line_size = "Толщина линий:",
+          alpha = "Прозрачность точек:",
+          clean_final2 = "Финальный порог:",
+          min_final_n = "Мин. точек после очистки:",
+          clean_model2 = "Модель для очистки:",
+          clean_all2 = "Запустить очистку",
+          ribbon_percent = "Ширина доверительной полосы (%):",
+          ribbon_alpha = "Прозрачность полосы:",
+          ribbon_model = "Для какой модели:",
+          show_ribbon = "Показывать доверительную полосу",
+          show_points = "Показывать точки",
+          show_power = "Показывать степенную модель",
+          show_exp = "Показывать экспоненциальную модель"
+        )
+      )
+    }
+  })
+
+  observe({
+    tr <- i18n()
+    updateActionButton(session, "reset_default_data", label = tr$labels$reset)
+    updateSelectInput(session, "species", label = tr$labels$species)
+    updateActionButton(session, "next_species", label = tr$labels$next)
+    updateActionButton(session, "prev_species", label = tr$labels$prev)
+    updateActionButton(session, "highlight_outliers", label = tr$labels$highlight)
+    updateSliderInput(session, "point_size", label = tr$labels$point_size)
+    updateSliderInput(session, "line_size", label = tr$labels$line_size)
+    updateSliderInput(session, "alpha", label = tr$labels$alpha)
+    updateSliderInput(session, "clean_final2", label = tr$labels$clean_final2)
+    updateNumericInput(session, "min_final_n", label = tr$labels$min_final_n)
+    updateSelectInput(session, "clean_model2", label = tr$labels$clean_model2)
+    updateActionButton(session, "clean_all2", label = tr$labels$clean_all2)
+    updateSliderInput(session, "ribbon_percent", label = tr$labels$ribbon_percent)
+    updateSliderInput(session, "ribbon_alpha", label = tr$labels$ribbon_alpha)
+    updateSelectInput(session, "ribbon_model", label = tr$labels$ribbon_model)
+    shinyWidgets::updatePrettyCheckbox(session, "show_ribbon", label = tr$labels$show_ribbon)
+    shinyWidgets::updatePrettyCheckbox(session, "show_points", label = tr$labels$show_points)
+    shinyWidgets::updatePrettyCheckbox(session, "show_power", label = tr$labels$show_power)
+    shinyWidgets::updatePrettyCheckbox(session, "show_exp", label = tr$labels$show_exp)
+  })
+
+  observeEvent(input$upload_data_file, {
+    req(input$upload_data_file)
+
+    tryCatch({
+      uploaded_raw <- read_excel(input$upload_data_file$datapath)
+      prepared_uploaded <- prepare_species_data(uploaded_raw)
+
+      if (nrow(prepared_uploaded$data) == 0) {
+        stop("После фильтрации не осталось данных (нужно минимум 7 наблюдений на вид).")
+      }
+
+      current_data(prepared_uploaded$data)
+      current_source_name(paste0(i18n()$uploaded_prefix, ": ", input$upload_data_file$name))
+
+      clean_all_results$result <- NULL
+      clean_all_results$timestamp <- NULL
+      clean_all_results$gap_filtered <- NULL
+      clean_all_results$gap_diagnostics <- NULL
+
+      species_list <- sort(unique(prepared_uploaded$data$species))
+      updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
+
+      showNotification(i18n()$upload_ok, type = "message", duration = 5)
+    }, error = function(e) {
+      showNotification(paste(i18n()$upload_err, e$message), type = "error", duration = 8)
+    })
+  })
+
+  observeEvent(input$reset_default_data, {
+    current_data(data)
+    current_source_name(i18n()$built_in)
+
+    clean_all_results$result <- NULL
+    clean_all_results$timestamp <- NULL
+    clean_all_results$gap_filtered <- NULL
+    clean_all_results$gap_diagnostics <- NULL
+
+    species_list <- sort(unique(current_data()$species))
+    updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
+
+    showNotification(i18n()$reset_msg, type = "message", duration = 4)
+  })
+
+  output$data_source_info <- renderText({
+    tr <- i18n()
+    paste0(tr$source_prefix, ": ", current_source_name(), " | ", tr$rows, ": ", nrow(current_data()), " | ", tr$species, ": ", length(unique(current_data()$species)))
+  })
+
+  output$download_active_data <- downloadHandler(
+    filename = function() {
+      paste0("исходные_данные_", Sys.Date(), ".xlsx")
+    },
+    content = function(file) {
+      wb <- createWorkbook()
+      addWorksheet(wb, "Данные")
+      writeData(wb, "Данные", current_data())
+      saveWorkbook(wb, file, overwrite = TRUE)
+    }
+  )
+
 output$download_cleaned_btn1 <- downloadHandler(
   filename = function() {
     paste0("очищенные_данные_", Sys.Date(), ".xlsx")
@@ -1018,10 +1189,77 @@ observeEvent(input$export_groups, {
 
   
 #--------------------  КОНЕЦ ГРУППИРОВКА ------------------------------------------------------
+
+    passed_compare_species <- reactive({
+      req(cleaned_data_for_comparison())
+      compare_data <- cleaned_data_for_comparison()$clean_data
+
+      if (is.null(compare_data) || nrow(compare_data) == 0) {
+        return(character(0))
+      }
+
+      compare_filtered <- if ("was_cleaned" %in% colnames(compare_data)) {
+        compare_data %>% filter(was_cleaned == TRUE)
+      } else {
+        compare_data
+      }
+
+      compare_filtered %>%
+        group_by(species) %>%
+        summarise(n_points = n(), .groups = "drop") %>%
+        filter(n_points >= 3) %>%
+        pull(species) %>%
+        as.character() %>%
+        sort()
+    })
+
+    output$compare_cleaning_info <- renderUI({
+      all_species <- sort(unique(as.character(current_data()$species)))
+
+      if (is.null(clean_all_results$result)) {
+        return(tags$div(
+          class = "alert alert-warning",
+          "Очистка ещё не запускалась. Список видов появится после выполнения очистки."
+        ))
+      }
+
+      passed_species <- passed_compare_species()
+      failed_species <- setdiff(all_species, passed_species)
+
+      tags$div(
+        class = "alert alert-info",
+        tags$p(tags$b("Видов для сравнения (прошли очистку): "), length(passed_species)),
+        tags$p(tags$b("Видов не прошли очистку: "), length(failed_species)),
+        if (length(failed_species) > 0) {
+          tags$div(
+            tags$b("Список исключённых видов:"),
+            tags$br(),
+            paste(failed_species, collapse = ", ")
+          )
+        } else {
+          tags$div("Все виды прошли очистку.")
+        }
+      )
+    })
+
+    observe({
+      if (!identical(input$main_navbar, "Сравнение до/после")) {
+        return()
+      }
+
+      passed_species <- passed_compare_species()
+      if (length(passed_species) == 0) {
+        return()
+      }
+
+      if (is.null(input$species) || !(input$species %in% passed_species)) {
+        updateSelectInput(session, "species", selected = passed_species[1])
+      }
+    })
   
     species_data <- reactive({
       req(input$species)
-      data %>% 
+      current_data() %>% 
         filter(species == input$species) %>%
         arrange(length)
     })
@@ -1256,7 +1494,7 @@ cleaned_data_for_comparison <- reactive({
       tryCatch({
         # 1. Очистка выбросов
         result <- clean_all_species_correct(  
-          data = data,
+          data = current_data(),
           final_threshold = input$clean_final2,
           min_final_n = input$min_final_n,
           verbose = TRUE
@@ -1458,15 +1696,27 @@ output$gap_calculation_RESULT <- renderPrint({
     
     # Навигация по видам
     observeEvent(input$next_species, {
-      species_list <- sort(unique(data$species))
+      species_list <- if (identical(input$main_navbar, "Сравнение до/после") && length(passed_compare_species()) > 0) {
+        passed_compare_species()
+      } else {
+        sort(unique(as.character(current_data()$species)))
+      }
+
       current <- which(species_list == input$species)
+      if (length(current) == 0) current <- 1
       next_idx <- ifelse(current < length(species_list), current + 1, 1)
       updateSelectInput(session, "species", selected = species_list[next_idx])
     })
     
     observeEvent(input$prev_species, {
-      species_list <- sort(unique(data$species))
+      species_list <- if (identical(input$main_navbar, "Сравнение до/после") && length(passed_compare_species()) > 0) {
+        passed_compare_species()
+      } else {
+        sort(unique(as.character(current_data()$species)))
+      }
+
       current <- which(species_list == input$species)
+      if (length(current) == 0) current <- 1
       prev_idx <- ifelse(current > 1, current - 1, length(species_list))
       updateSelectInput(session, "species", selected = species_list[prev_idx])
     })
