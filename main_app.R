@@ -136,8 +136,8 @@ server <- function(input, output, session) {
           reset = "Use built-in data",
           download = "Download current source data",
           species = "Select species:",
-          next = "➡️Next species",
-          prev = "⬅️Previous species",
+          next_label = "➡️Next species",
+          prev_label = "⬅️Previous species",
           highlight = "Highlight outliers",
           point_size = "Point size:",
           line_size = "Line width:",
@@ -170,8 +170,8 @@ server <- function(input, output, session) {
           reset = "Использовать встроенные данные",
           download = "Скачать текущие исходные данные",
           species = "Выберите вид:",
-          next = "➡️Следующий вид",
-          prev = "⬅️Предыдущий вид",
+          next_label = "➡️Следующий вид",
+          prev_label = "⬅️Предыдущий вид",
           highlight = "Подсветить выбросы",
           point_size = "Размер точек:",
           line_size = "Толщина линий:",
@@ -196,8 +196,8 @@ server <- function(input, output, session) {
     tr <- i18n()
     updateActionButton(session, "reset_default_data", label = tr$labels$reset)
     updateSelectInput(session, "species", label = tr$labels$species)
-    updateActionButton(session, "next_species", label = tr$labels$next)
-    updateActionButton(session, "prev_species", label = tr$labels$prev)
+    updateActionButton(session, "next_species", label = tr$labels$next_label)
+    updateActionButton(session, "prev_species", label = tr$labels$prev_label)
     updateActionButton(session, "highlight_outliers", label = tr$labels$highlight)
     updateSliderInput(session, "point_size", label = tr$labels$point_size)
     updateSliderInput(session, "line_size", label = tr$labels$line_size)
