@@ -9,6 +9,35 @@ create_main_ui <- function() {
       title = "Меню",
       id = "main_navbar",
       collapsible = TRUE,
+
+      tabPanel(
+        "Read me",
+        icon = icon("book"),
+        fluidRow(
+          column(
+            10,
+            offset = 1,
+            tags$div(
+              class = "panel panel-default",
+              style = "margin-top: 20px;",
+              tags$div(
+                class = "panel-heading",
+                tags$h3("📘 Инструкция по формату входного файла", style = "margin: 0;")
+              ),
+              tags$div(
+                class = "panel-body",
+                selectInput(
+                  "ui_lang",
+                  "Language / Язык",
+                  choices = c("Русский" = "ru", "English" = "en"),
+                  selected = "ru"
+                ),
+                uiOutput("readme_content")
+              )
+            )
+          )
+        )
+      ),
       
       # ============ ВКЛАДКА 1: АНАЛИЗ ОТДЕЛЬНЫХ ВИДОВ ============
       tabPanel(
@@ -40,6 +69,9 @@ create_main_ui <- function() {
           "Ширина доверительной полосы (%)",
           min = 0, max = 50, value = 40
         ),
+        hr(),
+        h4("Информация по очистке"),
+        uiOutput("compare_cleaning_info"),
         hr(),
     create_navigation_buttons()),
      mainPanel(
@@ -314,6 +346,18 @@ create_analysis_main_panel <- function() {
 create_sidebar_panel <- function() {
   sidebarPanel(
     width = 3,
+    h4("📥 Импорт данных"),
+    fileInput(
+      "upload_data_file",
+      "Загрузите Excel (.xlsx)",
+      accept = c(".xlsx")
+    ),
+    actionButton("reset_default_data", "Использовать встроенные данные", class = "btn-default", style = "width: 100%; margin-bottom: 8px;"),
+    downloadButton("download_active_data", "Скачать текущие исходные данные", class = "btn-info", style = "width: 100%;"),
+    br(), br(),
+    textOutput("data_source_info"),
+
+    hr(),
     selectInput("species", "Выберите вид:",
                 choices = sort(unique(data$species)),
                 selected = unique(data$species)[1]),
