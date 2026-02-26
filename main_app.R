@@ -120,6 +120,101 @@ server <- function(input, output, session) {
   current_data <- reactiveVal(data)
   current_source_name <- reactiveVal("Встроенный файл: 10year2026.xlsx")
 
+  i18n <- reactive({
+    if (identical(input$ui_lang, "en")) {
+      list(
+        source_prefix = "Data source",
+        built_in = "Built-in file: 10year2026.xlsx",
+        uploaded_prefix = "User file",
+        rows = "rows",
+        species = "species",
+        upload_ok = "✅ Data uploaded successfully. Using user Excel file.",
+        upload_err = "❌ File upload error:",
+        reset_msg = "ℹ️ Switched back to built-in data from 10year2026.xlsx.",
+        labels = list(
+          upload = "Upload Excel (.xlsx)",
+          reset = "Use built-in data",
+          download = "Download current source data",
+          species = "Select species:",
+          next = "➡️Next species",
+          prev = "⬅️Previous species",
+          highlight = "Highlight outliers",
+          point_size = "Point size:",
+          line_size = "Line width:",
+          alpha = "Point alpha:",
+          clean_final2 = "Final threshold:",
+          min_final_n = "Min points after cleaning:",
+          clean_model2 = "Cleaning model:",
+          clean_all2 = "Run cleaning",
+          ribbon_percent = "Confidence band width (%):",
+          ribbon_alpha = "Band transparency:",
+          ribbon_model = "Model for band:",
+          show_ribbon = "Show confidence band",
+          show_points = "Show points",
+          show_power = "Show power model",
+          show_exp = "Show exponential model"
+        )
+      )
+    } else {
+      list(
+        source_prefix = "Источник данных",
+        built_in = "Встроенный файл: 10year2026.xlsx",
+        uploaded_prefix = "Пользовательский файл",
+        rows = "строк",
+        species = "видов",
+        upload_ok = "✅ Данные успешно загружены. Используется пользовательский Excel.",
+        upload_err = "❌ Ошибка загрузки файла:",
+        reset_msg = "ℹ️ Возвращены встроенные данные из 10year2026.xlsx.",
+        labels = list(
+          upload = "Загрузите Excel (.xlsx)",
+          reset = "Использовать встроенные данные",
+          download = "Скачать текущие исходные данные",
+          species = "Выберите вид:",
+          next = "➡️Следующий вид",
+          prev = "⬅️Предыдущий вид",
+          highlight = "Подсветить выбросы",
+          point_size = "Размер точек:",
+          line_size = "Толщина линий:",
+          alpha = "Прозрачность точек:",
+          clean_final2 = "Финальный порог:",
+          min_final_n = "Мин. точек после очистки:",
+          clean_model2 = "Модель для очистки:",
+          clean_all2 = "Запустить очистку",
+          ribbon_percent = "Ширина доверительной полосы (%):",
+          ribbon_alpha = "Прозрачность полосы:",
+          ribbon_model = "Для какой модели:",
+          show_ribbon = "Показывать доверительную полосу",
+          show_points = "Показывать точки",
+          show_power = "Показывать степенную модель",
+          show_exp = "Показывать экспоненциальную модель"
+        )
+      )
+    }
+  })
+
+  observe({
+    tr <- i18n()
+    updateActionButton(session, "reset_default_data", label = tr$labels$reset)
+    updateSelectInput(session, "species", label = tr$labels$species)
+    updateActionButton(session, "next_species", label = tr$labels$next)
+    updateActionButton(session, "prev_species", label = tr$labels$prev)
+    updateActionButton(session, "highlight_outliers", label = tr$labels$highlight)
+    updateSliderInput(session, "point_size", label = tr$labels$point_size)
+    updateSliderInput(session, "line_size", label = tr$labels$line_size)
+    updateSliderInput(session, "alpha", label = tr$labels$alpha)
+    updateSliderInput(session, "clean_final2", label = tr$labels$clean_final2)
+    updateNumericInput(session, "min_final_n", label = tr$labels$min_final_n)
+    updateSelectInput(session, "clean_model2", label = tr$labels$clean_model2)
+    updateActionButton(session, "clean_all2", label = tr$labels$clean_all2)
+    updateSliderInput(session, "ribbon_percent", label = tr$labels$ribbon_percent)
+    updateSliderInput(session, "ribbon_alpha", label = tr$labels$ribbon_alpha)
+    updateSelectInput(session, "ribbon_model", label = tr$labels$ribbon_model)
+    shinyWidgets::updatePrettyCheckbox(session, "show_ribbon", label = tr$labels$show_ribbon)
+    shinyWidgets::updatePrettyCheckbox(session, "show_points", label = tr$labels$show_points)
+    shinyWidgets::updatePrettyCheckbox(session, "show_power", label = tr$labels$show_power)
+    shinyWidgets::updatePrettyCheckbox(session, "show_exp", label = tr$labels$show_exp)
+  })
+
   observeEvent(input$upload_data_file, {
     req(input$upload_data_file)
 
@@ -132,7 +227,7 @@ server <- function(input, output, session) {
       }
 
       current_data(prepared_uploaded$data)
-      current_source_name(paste0("Пользовательский файл: ", input$upload_data_file$name))
+      current_source_name(paste0(i18n()$uploaded_prefix, ": ", input$upload_data_file$name))
 
       clean_all_results$result <- NULL
       clean_all_results$timestamp <- NULL
@@ -142,15 +237,15 @@ server <- function(input, output, session) {
       species_list <- sort(unique(prepared_uploaded$data$species))
       updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
 
-      showNotification("✅ Данные успешно загружены. Используется пользовательский Excel.", type = "message", duration = 5)
+      showNotification(i18n()$upload_ok, type = "message", duration = 5)
     }, error = function(e) {
-      showNotification(paste("❌ Ошибка загрузки файла:", e$message), type = "error", duration = 8)
+      showNotification(paste(i18n()$upload_err, e$message), type = "error", duration = 8)
     })
   })
 
   observeEvent(input$reset_default_data, {
     current_data(data)
-    current_source_name("Встроенный файл: 10year2026.xlsx")
+    current_source_name(i18n()$built_in)
 
     clean_all_results$result <- NULL
     clean_all_results$timestamp <- NULL
@@ -160,11 +255,12 @@ server <- function(input, output, session) {
     species_list <- sort(unique(current_data()$species))
     updateSelectInput(session, "species", choices = species_list, selected = species_list[1])
 
-    showNotification("ℹ️ Возвращены встроенные данные из 10year2026.xlsx.", type = "message", duration = 4)
+    showNotification(i18n()$reset_msg, type = "message", duration = 4)
   })
 
   output$data_source_info <- renderText({
-    paste0("Источник данных: ", current_source_name(), " | строк: ", nrow(current_data()), " | видов: ", length(unique(current_data()$species)))
+    tr <- i18n()
+    paste0(tr$source_prefix, ": ", current_source_name(), " | ", tr$rows, ": ", nrow(current_data()), " | ", tr$species, ": ", length(unique(current_data()$species)))
   })
 
   output$download_active_data <- downloadHandler(

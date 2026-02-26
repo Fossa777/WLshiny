@@ -363,6 +363,12 @@ create_analysis_main_panel <- function() {
 create_sidebar_panel <- function() {
   sidebarPanel(
     width = 3,
+    selectInput(
+      "ui_lang",
+      "Language / Язык",
+      choices = c("Русский" = "ru", "English" = "en"),
+      selected = "ru"
+    ),
     h4("📥 Импорт данных"),
     fileInput(
       "upload_data_file",
