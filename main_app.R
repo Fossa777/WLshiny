@@ -228,7 +228,7 @@ server <- function(input, output, session) {
     updateActionButton(session, "export_grid", label = if (identical(input$ui_lang, "en")) "📁 Export grid" else "📁 Экспортировать сетку")
     updateActionButton(session, "export_individual", label = if (identical(input$ui_lang, "en")) "📁 Export separately" else "📁 Экспортировать отдельно")
     updateActionButton(session, "preview_grid", label = if (identical(input$ui_lang, "en")) "👁 Refresh preview" else "👁 Обновить предпросмотр")
-    updateDownloadButton(session, "download_export_plot", label = if (identical(input$ui_lang, "en")) "Download current preview" else "Скачать текущий предпросмотр")
+    shinyjs::runjs(sprintf("$(\"#download_export_plot\").text(\"%s\");", if (identical(input$ui_lang, "en")) "Download current preview" else "Скачать текущий предпросмотр"))
     updateActionButton(session, "main_overall_select_all", label = if (identical(input$ui_lang, "en")) "Select all" else "Выбрать все")
     updateActionButton(session, "main_overall_clear_all", label = if (identical(input$ui_lang, "en")) "Clear" else "Очистить")
     updateActionButton(session, "main_overall_export", label = if (identical(input$ui_lang, "en")) "📁 Export plot" else "📁 Экспортировать график")
