@@ -87,6 +87,9 @@ create_main_ui <- function() {
           min = 0, max = 50, value = 40
         ),
         hr(),
+        h4("Информация по очистке"),
+        uiOutput("compare_cleaning_info"),
+        hr(),
     create_navigation_buttons()),
      mainPanel(
         width = 9,

@@ -1093,6 +1093,73 @@ observeEvent(input$export_groups, {
 
   
 #--------------------  КОНЕЦ ГРУППИРОВКА ------------------------------------------------------
+
+    passed_compare_species <- reactive({
+      req(cleaned_data_for_comparison())
+      compare_data <- cleaned_data_for_comparison()$clean_data
+
+      if (is.null(compare_data) || nrow(compare_data) == 0) {
+        return(character(0))
+      }
+
+      compare_filtered <- if ("was_cleaned" %in% colnames(compare_data)) {
+        compare_data %>% filter(was_cleaned == TRUE)
+      } else {
+        compare_data
+      }
+
+      compare_filtered %>%
+        group_by(species) %>%
+        summarise(n_points = n(), .groups = "drop") %>%
+        filter(n_points >= 3) %>%
+        pull(species) %>%
+        as.character() %>%
+        sort()
+    })
+
+    output$compare_cleaning_info <- renderUI({
+      all_species <- sort(unique(as.character(current_data()$species)))
+
+      if (is.null(clean_all_results$result)) {
+        return(tags$div(
+          class = "alert alert-warning",
+          "Очистка ещё не запускалась. Список видов появится после выполнения очистки."
+        ))
+      }
+
+      passed_species <- passed_compare_species()
+      failed_species <- setdiff(all_species, passed_species)
+
+      tags$div(
+        class = "alert alert-info",
+        tags$p(tags$b("Видов для сравнения (прошли очистку): "), length(passed_species)),
+        tags$p(tags$b("Видов не прошли очистку: "), length(failed_species)),
+        if (length(failed_species) > 0) {
+          tags$div(
+            tags$b("Список исключённых видов:"),
+            tags$br(),
+            paste(failed_species, collapse = ", ")
+          )
+        } else {
+          tags$div("Все виды прошли очистку.")
+        }
+      )
+    })
+
+    observe({
+      if (!identical(input$main_navbar, "Сравнение до/после")) {
+        return()
+      }
+
+      passed_species <- passed_compare_species()
+      if (length(passed_species) == 0) {
+        return()
+      }
+
+      if (is.null(input$species) || !(input$species %in% passed_species)) {
+        updateSelectInput(session, "species", selected = passed_species[1])
+      }
+    })
   
     species_data <- reactive({
       req(input$species)
@@ -1533,15 +1600,27 @@ output$gap_calculation_RESULT <- renderPrint({
     
     # Навигация по видам
     observeEvent(input$next_species, {
-      species_list <- sort(unique(current_data()$species))
+      species_list <- if (identical(input$main_navbar, "Сравнение до/после") && length(passed_compare_species()) > 0) {
+        passed_compare_species()
+      } else {
+        sort(unique(as.character(current_data()$species)))
+      }
+
       current <- which(species_list == input$species)
+      if (length(current) == 0) current <- 1
       next_idx <- ifelse(current < length(species_list), current + 1, 1)
       updateSelectInput(session, "species", selected = species_list[next_idx])
     })
     
     observeEvent(input$prev_species, {
-      species_list <- sort(unique(current_data()$species))
+      species_list <- if (identical(input$main_navbar, "Сравнение до/после") && length(passed_compare_species()) > 0) {
+        passed_compare_species()
+      } else {
+        sort(unique(as.character(current_data()$species)))
+      }
+
       current <- which(species_list == input$species)
+      if (length(current) == 0) current <- 1
       prev_idx <- ifelse(current > 1, current - 1, length(species_list))
       updateSelectInput(session, "species", selected = species_list[prev_idx])
     })
