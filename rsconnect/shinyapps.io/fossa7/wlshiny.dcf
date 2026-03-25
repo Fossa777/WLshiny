@@ -5,6 +5,6 @@ account: fossa7
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 16981190
-bundleId: 11760082
+bundleId: 11760194
 url: https://fossa7.shinyapps.io/wlshiny/
 version: 1
