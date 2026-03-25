@@ -301,7 +301,7 @@ gap_visualization_plot <- function(Lmin = 3, gap_threshold = 45, maxlength = 30)
                linetype = "dashed") +
     # Заголовки
     labs(
-      title = sprintf("Ширина допустимого разрыва между данными: %.1f%% от диапазона", gap_threshold),
+      title = sprintf("Ширина допустимого разрыва между \n данными: %.1f%% от диапазона", gap_threshold),
       subtitle = sprintf("Общий диапазон: %.1f см (от %.1f до %.1f см)", 
                         total_range, Lmin, maxlength),
       x = "Длина, см",

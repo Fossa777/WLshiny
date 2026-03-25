@@ -453,7 +453,7 @@ output$gap_calculation_example <- renderPrint({
   Lmin <- input$gap_Lmin
   gap_threshold <- input$gap_threshold
   
-  cat("📐 ФОРМУЛА РАСЧЕТА РАЗРЫВОВ\n")
+  cat("ФОРМУЛА РАСЧЕТА РАЗРЫВОВ\n")
   cat("════════════════════════════════════════════════════\n\n")
   
   # Примерный расчет
