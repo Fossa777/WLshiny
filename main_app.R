@@ -43,10 +43,6 @@ prepare_species_data <- function(df) {
     stop(paste0("Отсутствуют обязательные колонки: ", paste(missing_cols, collapse = ", ")))
   }
 
-  if (!"secies_name_ru" %in% colnames(df) && "species_name_ru" %in% colnames(df)) {
-    df$secies_name_ru <- df$species_name_ru
-  }
-
   if ("Family" %in% colnames(df)) df$Family <- as.factor(df$Family)
   if ("species" %in% colnames(df)) df$species <- as.factor(df$species)
   if ("Salt" %in% colnames(df)) df$Salt <- as.factor(df$Salt)
@@ -453,7 +449,7 @@ output$gap_calculation_example <- renderPrint({
   Lmin <- input$gap_Lmin
   gap_threshold <- input$gap_threshold
   
-  cat("📐 ФОРМУЛА РАСЧЕТА РАЗРЫВОВ\n")
+  cat("ФОРМУЛА РАСЧЕТА РАЗРЫВОВ\n")
   cat("════════════════════════════════════════════════════\n\n")
   
   # Примерный расчет
