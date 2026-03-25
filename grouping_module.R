@@ -5,6 +5,25 @@ build_species_models <- function(data, min_n = 7) {
   
   cat("\n=== НАЧАЛО build_species_models ===\n")
   cat("Входные данные: строк =", nrow(data), ", видов =", length(unique(data$species)), "\n")
+
+  if (!"secies_name_ru" %in% colnames(data)) {
+    if ("species_name_ru" %in% colnames(data)) {
+      data$secies_name_ru <- data$species_name_ru
+    } else if ("species" %in% colnames(data)) {
+      data$secies_name_ru <- as.character(data$species)
+    }
+  }
+
+  if (!"was_cleaned" %in% colnames(data)) {
+    data$was_cleaned <- TRUE
+  }
+
+  required_cols <- c("species", "secies_name_ru", "length", "weight", "maxlength", "was_cleaned")
+  missing_cols <- setdiff(required_cols, colnames(data))
+
+  if (length(missing_cols) > 0) {
+    stop(paste0("Недостаточно данных для группировки. Отсутствуют колонки: ", paste(missing_cols, collapse = ", ")))
+  }
   
   # Упрощенный подход - извлекаем коэффициенты напрямую
   models <- data %>%
