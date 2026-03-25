@@ -1,10 +1,16 @@
 # ui_module.R
 
 # Основной UI
-create_main_ui <- function() {
+create_main_ui <- function(species_counts, species_to_keep, data) {
   fluidPage(
-    titlePanel(paste("Анализ длина-вес рыб. Исходное количество видов: ", length(unique(species_counts$species)), ". Видов с n ≥ 7: ", length(species_to_keep))),
-    
+    titlePanel(
+      paste0(
+        "Анализ длина-вес рыб. Исходное количество видов: ",
+        length(unique(species_counts$species)),
+        ". Видов с n ≥ 7: ",
+        length(species_to_keep)
+      )
+    ),
     navbarPage(
       title = "Меню",
       id = "main_navbar",
@@ -40,14 +46,14 @@ create_main_ui <- function() {
       ),
       
       # ============ ВКЛАДКА 1: АНАЛИЗ ОТДЕЛЬНЫХ ВИДОВ ============
-      tabPanel(
-        "Анализ видов",
-        icon = icon("fish"),
-        sidebarLayout(
-          sidebarPanel = create_sidebar_panel(),
-          mainPanel = create_analysis_main_panel()
-        )
-      ),
+     tabPanel(
+  "Анализ видов",
+  icon = icon("fish"),
+  sidebarLayout(
+    sidebarPanel = create_sidebar_panel(data),
+    mainPanel = create_analysis_main_panel()
+  )
+),
       
       # ============ ВКЛАДКА 2: ОЧИСТКА ДАННЫХ ============
       tabPanel(
@@ -125,13 +131,13 @@ create_main_ui <- function() {
             numericInput("export_dpi", "Разрешение (DPI):", value = 300, min = 150, max = 600, step = 50),
             radioButtons("export_format", "Формат файла:", choices = c("PNG" = "png", "PDF" = "pdf", "TIFF" = "tiff"), selected = "png"),
             hr(),
-            h4("💾 Экспорт"),
-            textInput("export_folder", "Папка для сохранения:", value = "plotsResult"),
-            textInput("export_filename", "Имя файла (без расширения):", value = "all_groups"),
-            actionButton("export_grid", "📁 Экспортировать сетку", class = "btn-success", style = "width: 100%; font-weight: bold; margin-bottom: 10px;"),
-            actionButton("export_individual", "📁 Экспортировать отдельно", class = "btn-primary", style = "width: 100%; font-weight: bold; margin-bottom: 10px;"),
-            actionButton("preview_grid", "👁 Обновить предпросмотр", class = "btn-info", style = "width: 100%; margin-bottom: 10px;"),
-            downloadButton("download_export_plot", "Скачать текущий предпросмотр", class = "btn-success")
+h4("💾 Экспорт"),
+textInput("export_filename", "Имя файла (без расширения):", value = "all_groups"),
+downloadButton("download_export_grid", "📥 Скачать итоговую сетку", class = "btn-success"),
+tags$div(style = "margin-bottom: 10px;"),
+actionButton("export_individual", "📁 Экспортировать отдельно", class = "btn-primary", style = "width: 100%; font-weight: bold; margin-bottom: 10px;"),
+actionButton("preview_grid", "👁 Обновить предпросмотр", class = "btn-info", style = "width: 100%; margin-bottom: 10px;"),
+downloadButton("download_export_plot", "Скачать текущий предпросмотр", class = "btn-secondary")
           ),
           mainPanel(
             width = 9,
@@ -343,7 +349,7 @@ create_analysis_main_panel <- function() {
 }
 
 # Боковая панель
-create_sidebar_panel <- function() {
+create_sidebar_panel <- function(data) {
   sidebarPanel(
     width = 3,
     h4("📥 Импорт данных"),
@@ -358,9 +364,12 @@ create_sidebar_panel <- function() {
     textOutput("data_source_info"),
 
     hr(),
-    selectInput("species", "Выберите вид:",
-                choices = sort(unique(data$species)),
-                selected = unique(data$species)[1]),
+     selectInput(
+      "species",
+      "Выберите вид:",
+      choices = sort(unique(data$species)),
+      selected = unique(data$species)[1]
+    ),
     
     hr(),
     create_navigation_buttons(),

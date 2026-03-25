@@ -84,7 +84,7 @@ prepare_species_data <- function(df) {
   )
 }
 
-initial_loaded <- prepare_species_data(read_excel("10year2026.xlsx"))
+initial_loaded <- prepare_species_data(read_excel("./10year2026.xlsx"))
 Species10 <- initial_loaded$data
 species_counts <- initial_loaded$species_counts
 species_to_keep <- initial_loaded$species_to_keep
@@ -96,13 +96,28 @@ cat("Видов после фильтрации (≥7 точек):", length(spec
 # Загружаем данные
 data <- Species10
 
-print(ls())
-print(exists("species_counts"))
+cat("=== DEBUG BEFORE UI ===\n")
+cat("exists species_counts: ", exists("species_counts"), "\n")
+cat("exists species_to_keep: ", exists("species_to_keep"), "\n")
+
+if (exists("species_counts")) {
+  cat("class species_counts: ", class(species_counts), "\n")
+  cat("names species_counts: ", paste(names(species_counts), collapse = ", "), "\n")
+  cat("nrow species_counts: ", nrow(species_counts), "\n")
+}
+
+if (exists("species_to_keep")) {
+  cat("length species_to_keep: ", length(species_to_keep), "\n")
+}
 
 
 create_interactive_comparison <- function(data) {
   
-  ui <- create_main_ui()
+ ui <- create_main_ui(
+  species_counts = species_counts,
+  species_to_keep = species_to_keep,
+  data = data
+)
   
 
 #--------------  SERVER  --------------------------------
@@ -1097,11 +1112,13 @@ output$grouping_plot <- renderPlot({
     }
   )
 
-  observeEvent(input$export_grid, {
+  output$download_export_grid <- downloadHandler(
+  filename = function() {
+    fmt <- input$export_format %||% "png"
+    paste0(input$export_filename %||% "all_groups", "_", Sys.Date(), ".", fmt)
+  },
+  content = function(file) {
     req(grouping_state$grouped)
-
-    export_folder <- input$export_folder %||% "plotsResult"
-    if (!dir.exists(export_folder)) dir.create(export_folder, recursive = TRUE)
 
     full_plot <- create_export_preview_plot(
       grouped_data = grouping_state$grouped,
@@ -1114,22 +1131,16 @@ output$grouping_plot <- renderPlot({
       preview_only = FALSE
     )
 
-    out_file <- file.path(
-      export_folder,
-      paste0(input$export_filename %||% "all_groups", "_", Sys.Date(), ".", input$export_format %||% "png")
-    )
-
     ggsave(
-      filename = out_file,
+      filename = file,
       plot = full_plot,
       width = input$export_width %||% 21,
       height = input$export_height %||% 29.7,
       units = "cm",
       dpi = input$export_dpi %||% 300
     )
-
-    showNotification(paste("✅ Сетка графиков сохранена:", out_file), type = "message", duration = 8)
-  })
+  }
+)
 
   observeEvent(input$export_individual, {
     req(grouping_state$grouped)
