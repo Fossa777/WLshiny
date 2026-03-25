@@ -1,4 +1,4 @@
-# main_app.R
+# app.R
 `%||%` <- function(x, y) if (!is.null(x)) x else y
 
 library(shiny)
@@ -19,17 +19,17 @@ library(purrr)
 library(grid)
 library(shinyjs)
 
-source("Robust.R")
-source("compare_before_after.R")
-source("db_export_module.R")
+source("./Robust.R")
+source("./compare_before_after.R")
+source("./db_export_module.R")
 
 # Загружаем модули
-source("statistics_module.R")
-source("plotting_module.R")
-source("cleaning_module.R")
-source("ui_module.R")
-source("grouping_module.R")
-source("grouping_server_module.R")
+source("./statistics_module.R")
+source("./plotting_module.R")
+source("./cleaning_module.R")
+source("./ui_module.R")
+source("./grouping_module.R")
+source("./grouping_server_module.R")
 
 source_grouping_functions()
 
@@ -95,6 +95,10 @@ cat("Видов после фильтрации (≥7 точек):", length(spec
 
 # Загружаем данные
 data <- Species10
+
+print(ls())
+print(exists("species_counts"))
+
 
 create_interactive_comparison <- function(data) {
   
