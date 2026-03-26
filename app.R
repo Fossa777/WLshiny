@@ -299,8 +299,17 @@ server <- function(input, output, session) {
           tags$li("Column names must match exactly: species, species_name_ru, length, weight, maxlength."),
           tags$li("Rows with missing or non-positive length/weight/maxlength are removed automatically."),
           tags$li("After filtering, each species must have at least 7 observations, otherwise it is excluded.")
-        )
+        ),
+        tags$hr(),
+        tags$h4("Developer:"),
+        tags$ul(
+          tags$li("Stepankov Artem Petrovich"),
+          tags$li("E-mail: fossa7@mail.ru"),
+          tags$li("Website: https://fossamethod.com"),
+          tags$li("Primorsky Aquarium – Branch of the A.V. Zhirmunsky National Scientific Center of Marine Biology,"),
+          tags$li("Far Eastern Branch of the Russian Academy of Sciences, Vladivostok")
       )
+    )
     } else {
       tagList(
         tags$p("Приложение может работать со встроенными данными (по умолчанию) или с вашим Excel-файлом (.xlsx)."),
@@ -325,10 +334,20 @@ server <- function(input, output, session) {
           tags$li("Столбцы species, species_name_ru, length, weight, maxlength должны называться точно так же."),
           tags$li("Строки с пустыми значениями и нечисловыми/неположительными length, weight или maxlength удаляются автоматически."),
           tags$li("Для каждого вида после фильтрации должно остаться не менее 7 наблюдений, иначе вид исключается из анализа.")
-        )
+        ),
+        tags$hr(),
+        tags$h4("Разработчик:"),
+        tags$ul(
+          tags$li("Степаньков Артем Петрович"),
+          tags$li("E-mail: fossa7@mail.ru"),
+          tags$li("Сайт: https://fossamethod.ru"),
+          tags$li("«Приморский океанариум» - филиал ННЦМБ ДВО РАН, Владивосток.")
+        ),
       )
     }
   })
+
+
 
   observeEvent(input$upload_data_file, {
     req(input$upload_data_file)

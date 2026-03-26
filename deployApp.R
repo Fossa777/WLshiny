@@ -4,4 +4,4 @@ rsconnect::setAccountInfo(name='fossa7',
                           secret='cZg7DDY1bZPjeunp3ihpEVmkq0wMJX2mVt2sUtiP')
 
 library(rsconnect)
-rsconnect::deployApp('C:/Users/Fossa/OneDrive/Документы/WLshiny')
+rsconnect::deployApp('C:/Users/stepankov_ap/Documents/WLshiny/')

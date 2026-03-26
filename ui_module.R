@@ -293,7 +293,7 @@ create_grouping_main_panel <- function() {
               column(6, actionButton("single_clear_all", "Очистить", class = "btn-sm btn-danger"))
             ),
             hr(),
-            checkboxInput("single_show_groups", "Показывать фон групп", value = TRUE),
+            checkboxInput("single_show_groups", "Показывать фон", value = TRUE),
             checkboxInput("single_log_space", "Log-масштаб", value = FALSE)
           ),
           mainPanel(
