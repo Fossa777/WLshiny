@@ -3,6 +3,7 @@
 # Основной UI
 create_main_ui <- function(species_counts, species_to_keep, data) {
   fluidPage(
+    useShinyjs(),
     titlePanel(
       paste0(
         "Анализ длина-вес рыб. Исходное количество видов: ",
@@ -73,7 +74,7 @@ create_main_ui <- function(species_counts, species_to_keep, data) {
         sliderInput(
           "compare_ribbon_percent",
           "Ширина доверительной полосы (%)",
-          min = 0, max = 50, value = 40
+          min = 0, max = 50, value = 30
         ),
         hr(),
         h4("Информация по очистке"),
@@ -105,7 +106,7 @@ create_main_ui <- function(species_counts, species_to_keep, data) {
             h4("⚙ Настройки экспорта"),
             htmlOutput("export_info_simple"),
             hr(),
-            h4("📊 Настройки сетки"),
+            h4("Настройки сетки"),
             sliderInput("export_ncol", "Графиков по ширине:", min = 1, max = 5, value = 2, step = 1),
             checkboxInput("export_auto_height", "Автоматическая высота", value = TRUE),
             conditionalPanel(
@@ -114,28 +115,28 @@ create_main_ui <- function(species_counts, species_to_keep, data) {
             ),
             sliderInput("export_spacing", "Отступ между графиками:", min = 0.1, max = 2, value = 0.5, step = 0.1),
             hr(),
-            h4("🔤 Настройки шрифтов"),
+            h4("Настройки шрифтов"),
             sliderInput("export_font_size", "Основной размер шрифта:", min = 6, max = 16, value = 10, step = 0.5),
             sliderInput("export_title_size", "Размер заголовка (%):", min = 70, max = 130, value = 90, step = 5, post = "%"),
             sliderInput("export_axis_size", "Размер подписей осей (%):", min = 70, max = 120, value = 80, step = 5, post = "%"),
             checkboxInput("export_show_titles", "Показывать заголовки графиков", value = TRUE),
             hr(),
-            h4("🎨 Настройки стиля"),
+            h4("Настройки стиля"),
             radioButtons("export_style", "Стиль графика:",
                          choices = c("Цветной" = "color", "Черно-белый (линии)" = "bw", "Черно-белый (точки)" = "bw_dots", "Минималистичный" = "minimal"),
                          selected = "color"),
             hr(),
-            h4("📐 Настройки размеров"),
+            h4("Настройки размеров"),
             numericInput("export_width", "Ширина итогового файла (см):", value = 21, min = 10, max = 50, step = 1),
             numericInput("export_height", "Высота итогового файла (см):", value = 29.7, min = 10, max = 50, step = 1),
             numericInput("export_dpi", "Разрешение (DPI):", value = 300, min = 150, max = 600, step = 50),
             radioButtons("export_format", "Формат файла:", choices = c("PNG" = "png", "PDF" = "pdf", "TIFF" = "tiff"), selected = "png"),
             hr(),
-h4("💾 Экспорт"),
+h4("Экспорт"),
 textInput("export_filename", "Имя файла (без расширения):", value = "all_groups"),
-downloadButton("download_export_grid", "📥 Скачать итоговую сетку", class = "btn-success"),
+downloadButton("download_export_grid", "Скачать итоговую сетку", class = "btn-success"),
 tags$div(style = "margin-bottom: 10px;"),
-actionButton("export_individual", "📁 Экспортировать отдельно", class = "btn-primary", style = "width: 100%; font-weight: bold; margin-bottom: 10px;"),
+downloadButton("download_individual_zip", "Скачать все графики (ZIP)", class = "btn-primary", style = "width: 100%; font-weight: bold; margin-bottom: 10px;"),
 actionButton("preview_grid", "👁 Обновить предпросмотр", class = "btn-info", style = "width: 100%; margin-bottom: 10px;"),
 downloadButton("download_export_plot", "Скачать текущий предпросмотр", class = "btn-secondary")
           ),
@@ -155,13 +156,13 @@ downloadButton("download_export_plot", "Скачать текущий предп
         sidebarLayout(
           sidebarPanel(
             width = 3,
-            h4("🎯 Выбор групп"),
+            h4("Выбор групп"),
             checkboxGroupInput("main_overall_species_select", "Выберите группы:", choices = NULL, selected = NULL, inline = TRUE),
             tags$style(HTML("#main_overall_species_select .shiny-options-group{column-count:2; column-gap:12px;} @media (max-width: 1400px){#main_overall_species_select .shiny-options-group{column-count:1;}} #main_overall_species_select .checkbox{margin-top:2px; margin-bottom:2px;}")),
             actionButton("main_overall_select_all", "Выбрать все", class = "btn-sm btn-primary"),
             actionButton("main_overall_clear_all", "Очистить", class = "btn-sm btn-danger"),
             hr(),
-            h4("📊 Настройки воронок"),
+            h4("Настройки воронок"),
             sliderInput("main_overall_funnel_alpha", "Прозрачность воронок:", min = 0.1, max = 0.5, value = 0.2, step = 0.05),
             checkboxInput("main_overall_show_mean", "Показывать средние линии", value = TRUE),
             conditionalPanel(
@@ -171,24 +172,24 @@ downloadButton("download_export_plot", "Скачать текущий предп
             ),
             checkboxInput("main_overall_show_bounds", "Показывать границы воронок", value = TRUE),
             hr(),
-            h4("🎨 Настройки отображения"),
+            h4("Настройки отображения"),
             radioButtons("main_overall_style", "Стиль графика:", choices = c("Цветной" = "color", "Черно-белый" = "bw", "Только средние линии" = "mean_only"), selected = "color"),
             sliderInput("main_overall_font_size", "Размер шрифта:", min = 10, max = 18, value = 12, step = 0.5),
             hr(),
-            h4("📐 Настройки осей"),
+            h4("Настройки осей"),
             numericInput("main_overall_x_max", "Макс. длина (см):", value = 50, min = 10, max = 200, step = 5),
             numericInput("main_overall_y_max", "Макс. вес (г):", value = 2000, min = 100, max = 10000, step = 100),
             hr(),
-            h4("💾 Экспорт"),
+            h4("Экспорт"),
             numericInput("main_overall_export_width", "Ширина (см):", value = 20, min = 10, max = 30, step = 0.5),
             numericInput("main_overall_export_height", "Высота (см):", value = 15, min = 10, max = 30, step = 0.5),
-            actionButton("main_overall_export", "📁 Экспортировать график", class = "btn-success", style = "width: 100%; font-weight: bold;")
+            downloadButton("download_main_overall_plot", "📥 Скачать график", class = "btn-success", style = "width: 100%; font-weight: bold;")
           ),
           mainPanel(
             width = 9,
             withSpinner(plotOutput("main_overall_plot", height = "650px"), type = 6, color = "#0d6efd"),
             br(),
-            h4("📋 Формулы групп"),
+            h4("Формулы групп"),
             DTOutput("main_overall_formulas_table")
           )
         )
@@ -239,7 +240,7 @@ create_grouping_sidebar <- function() {
     ),
 
     hr(),
-    h4("💾 Экспорт данных"),
+    h4("Экспорт данных"),
     actionButton("export_groups", "Экспорт в Excel",
                  class = "btn-success",
                  style = "width: 100%; font-weight: bold;"),
@@ -352,14 +353,13 @@ create_analysis_main_panel <- function() {
 create_sidebar_panel <- function(data) {
   sidebarPanel(
     width = 3,
-    h4("📥 Импорт данных"),
+    h4("Импорт данных"),
     fileInput(
       "upload_data_file",
       "Загрузите Excel (.xlsx)",
       accept = c(".xlsx")
     ),
     actionButton("reset_default_data", "Использовать встроенные данные", class = "btn-default", style = "width: 100%; margin-bottom: 8px;"),
-    downloadButton("download_active_data", "Скачать текущие исходные данные", class = "btn-info", style = "width: 100%;"),
     br(), br(),
     textOutput("data_source_info"),
 

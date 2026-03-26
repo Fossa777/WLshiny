@@ -1118,19 +1118,25 @@ create_group_plot_for_grid <- function(group_data, group_id, style = "color",
   max_length <- max(group_data$maxlength, na.rm = TRUE)
   max_weight <- max(group_data$a * (group_data$maxlength ^ group_data$b), na.rm = TRUE)
 
-  p +
-    labs(x = "Длина, см", y = "Вес, г", title = title_text) +
-    theme_minimal(base_size = font_size) +
-    theme(
-      panel.grid.minor = element_blank(),
-      panel.grid.major = element_line(linewidth = 0.2, color = "grey90"),
-      panel.border = element_rect(fill = NA, color = "grey70", linewidth = 0.3),
-      plot.title = if (show_title) element_text(hjust = 0.5, size = font_size * title_size_mult, face = "bold") else element_blank(),
-      axis.title = element_text(size = font_size * axis_size_mult),
-      axis.text = element_text(size = font_size * 0.7),
-      plot.margin = unit(c(3, 3, 3, 3), "mm"),
-      legend.position = "none"
-    ) +
+p +
+  labs(x = "Длина, см", y = "Вес, г", title = title_text) +
+  theme_minimal(base_size = font_size) +
+  theme(
+    text = element_text(family = "sans"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(linewidth = 0.2, color = "grey90"),
+    panel.border = element_rect(fill = NA, color = "grey70", linewidth = 0.3),
+    plot.title = if (show_title) element_text(
+      hjust = 0.5,
+      size = font_size * title_size_mult,
+      face = "bold",
+      family = "sans"
+    ) else element_blank(),
+    axis.title = element_text(size = font_size * axis_size_mult, family = "sans"),
+    axis.text = element_text(size = font_size * 0.7, family = "sans"),
+    plot.margin = unit(c(3, 3, 3, 3), "mm"),
+    legend.position = "none"
+  ) +
     coord_cartesian(xlim = c(0, max_length * 1.05), ylim = c(0, max_weight * 1.1)) +
     scale_x_continuous(breaks = scales::pretty_breaks(n = 4)) +
     scale_y_continuous(breaks = scales::pretty_breaks(n = 4))
@@ -1179,7 +1185,14 @@ create_export_preview_plot <- function(grouped_data,
   })
 
   nrow_grid <- ceiling(length(groups_to_plot) / ncol)
-  grid_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = ncol, nrow = nrow_grid, align = "hv", axis = "lb")
+
+  grid_plot <- cowplot::plot_grid(
+    plotlist = plot_list,
+    ncol = ncol,
+    nrow = nrow_grid,
+    align = "hv",
+    axis = "lb"
+  )
 
   title_text <- if (isTRUE(preview_only)) {
     sprintf("Группы регрессий длина-вес (показано %d из %d групп)", length(groups_to_plot), nrow(group_stats))
@@ -1188,11 +1201,22 @@ create_export_preview_plot <- function(grouped_data,
   }
 
   title <- cowplot::ggdraw() +
-    cowplot::draw_label(title_text, fontface = "bold", size = font_size * 1.2)
+    cowplot::draw_label(
+      title_text,
+      fontface = "bold",
+      size = font_size * 1.2,
+      fontfamily = "sans"
+    )
 
-  cowplot::plot_grid(title, grid_plot, ncol = 1, rel_heights = c(0.05, 0.95))
+  final_plot <- cowplot::plot_grid(
+    title,
+    grid_plot,
+    ncol = 1,
+    rel_heights = c(0.08, 1)
+  )
+
+  return(final_plot)
 }
-
 
 # Функция для экспорта очищенных данных
 create_cleaned_data_export <- function(cleaning_results) {

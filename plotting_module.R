@@ -123,11 +123,11 @@ create_regression_plot <- function(sp_data, pred_data, outliers = NULL,
     ) +
     theme_minimal(base_size = 14) +
     theme(
-      plot.title = element_text(face = "bold", size = 16),
-      plot.subtitle = element_text(size = 11, color = "gray50"),
+      plot.title = element_text(face = "bold", size = 16, family = "sans"),
+      plot.subtitle = element_text(size = 11, color = "gray50", family = "sans"),
       legend.position = "top",
       legend.title = element_blank(),
-      legend.text = element_text(size = 12)
+      legend.text = element_text(size = 12, family = "sans")
     )
   
   # Добавляем легенду для линий

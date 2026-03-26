@@ -18,6 +18,8 @@ library(broom)
 library(purrr)
 library(grid)
 library(shinyjs)
+library(zip)
+
 
 source("./Robust.R")
 source("./compare_before_after.R")
@@ -124,6 +126,20 @@ create_interactive_comparison <- function(data) {
 
 server <- function(input, output, session) {
   
+observe({
+  is_user_data <- current_source_type() == "uploaded"
+
+  if (is_user_data) {
+    shinyjs::enable("export_groups")
+    shinyjs::enable("download_cleaned_btn1")
+  } else {
+    shinyjs::disable("export_groups")
+    shinyjs::disable("download_cleaned_btn1")
+  }
+})
+
+
+
     # Реактивные значения
     clean_all_results <- reactiveValues(
       result = NULL,
@@ -142,6 +158,7 @@ server <- function(input, output, session) {
 
   current_data <- reactiveVal(data)
   current_source_name <- reactiveVal("Встроенный файл: 10year2026.xlsx")
+  current_source_type <- reactiveVal("built_in")
 
   i18n <- reactive({
     if (identical(input$ui_lang, "en")) {
@@ -157,7 +174,6 @@ server <- function(input, output, session) {
         labels = list(
           upload = "Upload Excel (.xlsx)",
           reset = "Use built-in data",
-          download = "Download current source data",
           species = "Select species:",
           next_label = "➡️Next species",
           prev_label = "⬅️Previous species",
@@ -191,7 +207,6 @@ server <- function(input, output, session) {
         labels = list(
           upload = "Загрузите Excel (.xlsx)",
           reset = "Использовать встроенные данные",
-          download = "Скачать текущие исходные данные",
           species = "Выберите вид:",
           next_label = "➡️Следующий вид",
           prev_label = "⬅️Предыдущий вид",
@@ -248,13 +263,14 @@ server <- function(input, output, session) {
     updateActionButton(session, "group_prev", label = if (identical(input$ui_lang, "en")) "◀ Previous" else "◀ Предыдущая")
     updateActionButton(session, "group_next", label = if (identical(input$ui_lang, "en")) "Next ▶" else "Следующая ▶")
     updateActionButton(session, "export_groups", label = if (identical(input$ui_lang, "en")) "Export to Excel" else "Экспорт в Excel")
-    updateActionButton(session, "export_grid", label = if (identical(input$ui_lang, "en")) "📁 Export grid" else "📁 Экспортировать сетку")
-    updateActionButton(session, "export_individual", label = if (identical(input$ui_lang, "en")) "📁 Export separately" else "📁 Экспортировать отдельно")
     updateActionButton(session, "preview_grid", label = if (identical(input$ui_lang, "en")) "👁 Refresh preview" else "👁 Обновить предпросмотр")
     shinyjs::runjs(sprintf("$(\"#download_export_plot\").text(\"%s\");", if (identical(input$ui_lang, "en")) "Download current preview" else "Скачать текущий предпросмотр"))
     updateActionButton(session, "main_overall_select_all", label = if (identical(input$ui_lang, "en")) "Select all" else "Выбрать все")
     updateActionButton(session, "main_overall_clear_all", label = if (identical(input$ui_lang, "en")) "Clear" else "Очистить")
-    updateActionButton(session, "main_overall_export", label = if (identical(input$ui_lang, "en")) "📁 Export plot" else "📁 Экспортировать график")
+    shinyjs::runjs(sprintf(
+  "$(\"#download_main_overall_plot\").text(\"%s\");",
+  if (identical(input$ui_lang, "en")) "Download plot" else "Скачать график"
+))
 
     # Перевод заголовков вкладок/блоков через JS
     if (identical(input$ui_lang, "en")) {
@@ -361,6 +377,7 @@ server <- function(input, output, session) {
       }
 
       current_data(prepared_uploaded$data)
+      current_source_type("uploaded")
       current_source_name(paste0(i18n()$uploaded_prefix, ": ", input$upload_data_file$name))
 
       clean_all_results$result <- NULL
@@ -379,6 +396,7 @@ server <- function(input, output, session) {
 
   observeEvent(input$reset_default_data, {
     current_data(data)
+    current_source_type("built_in")
     current_source_name(i18n()$built_in)
 
     clean_all_results$result <- NULL
@@ -397,17 +415,7 @@ server <- function(input, output, session) {
     paste0(tr$source_prefix, ": ", current_source_name(), " | ", tr$rows, ": ", nrow(current_data()), " | ", tr$species, ": ", length(unique(current_data()$species)))
   })
 
-  output$download_active_data <- downloadHandler(
-    filename = function() {
-      paste0("исходные_данные_", Sys.Date(), ".xlsx")
-    },
-    content = function(file) {
-      wb <- createWorkbook()
-      addWorksheet(wb, "Данные")
-      writeData(wb, "Данные", current_data())
-      saveWorkbook(wb, file, overwrite = TRUE)
-    }
-  )
+
 
 output$download_cleaned_btn1 <- downloadHandler(
   filename = function() {
@@ -471,7 +479,7 @@ output$download_cleaned_btn1 <- downloadHandler(
       
       showNotification(
         paste("✅ Файл готов к скачиванию:", basename(file)),
-        type = "success",
+        type = "message",
         duration = 5
       )
       
@@ -987,28 +995,49 @@ output$grouping_plot <- renderPlot({
   })
 
 
-  observeEvent(input$main_overall_export, {
-    req(grouping_state$grouped)
-
-    export_folder <- input$export_folder %||% "plotsResult"
-    if (!dir.exists(export_folder)) dir.create(export_folder, recursive = TRUE)
-
-    export_format <- input$export_format %||% "png"
-    export_dpi <- input$export_dpi %||% 300
-    export_name <- paste0(input$export_filename %||% "overall_plot", "_main_overall_", Sys.Date(), ".", export_format)
-    out_file <- file.path(export_folder, export_name)
-
-    ggsave(
-      filename = out_file,
-      plot = main_overall_plot_object(),
-      width = input$main_overall_export_width %||% 20,
-      height = input$main_overall_export_height %||% 15,
-      units = "cm",
-      dpi = export_dpi
+  output$download_main_overall_plot <- downloadHandler(
+  filename = function() {
+    fmt <- input$export_format %||% "png"
+    paste0(
+      input$export_filename %||% "overall_plot",
+      "_main_overall_",
+      Sys.Date(),
+      ".",
+      fmt
     )
+  },
+  content = function(file) {
+    req(grouping_state$grouped)
+    req(main_overall_plot_object())
 
-    showNotification(paste("✅ Экспорт выполнен:", out_file), type = "message", duration = 8)
-  })
+    fmt <- tolower(input$export_format %||% "png")
+    export_dpi <- input$export_dpi %||% 300
+
+    if (fmt == "pdf") {
+      ggsave(
+        filename = file,
+        plot = main_overall_plot_object(),
+        device = cairo_pdf,
+        width = input$main_overall_export_width %||% 20,
+        height = input$main_overall_export_height %||% 15,
+        units = "cm",
+        dpi = export_dpi
+      )
+    } else {
+      ggsave(
+        filename = file,
+        plot = main_overall_plot_object(),
+        width = input$main_overall_export_width %||% 20,
+        height = input$main_overall_export_height %||% 15,
+        units = "cm",
+        dpi = export_dpi
+      )
+    }
+  }
+)
+
+
+
 
   output$export_info_simple <- renderUI({
     if (is.null(grouping_state$grouped) || is.null(grouping_state$grouped$table)) {
@@ -1150,37 +1179,58 @@ output$grouping_plot <- renderPlot({
       preview_only = FALSE
     )
 
-    ggsave(
-      filename = file,
-      plot = full_plot,
-      width = input$export_width %||% 21,
-      height = input$export_height %||% 29.7,
-      units = "cm",
-      dpi = input$export_dpi %||% 300
-    )
+fmt <- input$export_format %||% "png"
+
+if (tolower(fmt) == "pdf") {
+  ggsave(
+    filename = file,
+    plot = full_plot,
+    device = cairo_pdf,
+    width = input$export_width %||% 21,
+    height = input$export_height %||% 29.7,
+    units = "cm",
+    dpi = input$export_dpi %||% 300
+  )
+} else {
+  ggsave(
+    filename = file,
+    plot = full_plot,
+    width = input$export_width %||% 21,
+    height = input$export_height %||% 29.7,
+    units = "cm",
+    dpi = input$export_dpi %||% 300
+  )
+}
   }
 )
 
-  observeEvent(input$export_individual, {
+  output$download_individual_zip <- downloadHandler(
+  filename = function() {
+    paste0(input$export_filename %||% "groups", "_", Sys.Date(), ".zip")
+  },
+  content = function(file) {
     req(grouping_state$grouped)
-
-    export_folder <- input$export_folder %||% "plotsResult"
-    if (!dir.exists(export_folder)) dir.create(export_folder, recursive = TRUE)
+    req(!is.null(grouping_state$grouped$table))
 
     group_stats <- grouping_state$grouped$table %>%
-      group_by(group) %>%
-      summarise(n_species = n(), .groups = "drop") %>%
-      filter(n_species > 1) %>%
-      arrange(group)
+      dplyr::group_by(group) %>%
+      dplyr::summarise(n_species = dplyr::n(), .groups = "drop") %>%
+      dplyr::filter(n_species > 1) %>%
+      dplyr::arrange(group)
 
-    if (nrow(group_stats) == 0) {
-      showNotification("Нет групп с количеством видов > 1 для экспорта", type = "warning", duration = 6)
-      return()
-    }
+    req(nrow(group_stats) > 0)
+
+    tmp_dir <- tempfile("group_plots_")
+    dir.create(tmp_dir, recursive = TRUE)
+
+    files_to_zip <- character(0)
+    fmt <- "png"
 
     for (i in seq_len(nrow(group_stats))) {
       group_id <- group_stats$group[i]
-      group_data <- grouping_state$grouped$table %>% filter(group == group_id)
+
+      group_data <- grouping_state$grouped$table %>%
+        dplyr::filter(group == group_id)
 
       p_group <- create_group_plot_for_grid(
         group_data = group_data,
@@ -1193,22 +1243,41 @@ output$grouping_plot <- renderPlot({
       )
 
       out_file <- file.path(
-        export_folder,
-        sprintf("group_%02d_%d_species.%s", group_id, group_stats$n_species[i], input$export_format %||% "png")
+        tmp_dir,
+        sprintf("group_%02d_%d_species.%s", group_id, group_stats$n_species[i], fmt)
       )
 
       ggsave(
         filename = out_file,
         plot = p_group,
         width = (input$export_width %||% 21) / max(1, input$export_ncol %||% 2),
-        height = (input$export_height %||% 29.7) / max(1, if (isTRUE(input$export_auto_height)) ceiling(nrow(group_stats)/(input$export_ncol %||% 2)) else (input$export_nrow %||% 2)),
+        height = (input$export_height %||% 29.7) / max(
+          1,
+          if (isTRUE(input$export_auto_height)) {
+            ceiling(nrow(group_stats) / (input$export_ncol %||% 2))
+          } else {
+            (input$export_nrow %||% 2)
+          }
+        ),
         units = "cm",
         dpi = input$export_dpi %||% 300
       )
+
+      files_to_zip <- c(files_to_zip, out_file)
     }
 
-    showNotification("✅ Отдельные графики групп экспортированы", type = "message", duration = 8)
-  })
+    req(length(files_to_zip) > 0)
+
+    old_wd <- getwd()
+    on.exit(setwd(old_wd), add = TRUE)
+    setwd(tmp_dir)
+
+    zip::zipr(
+      zipfile = file,
+      files = basename(files_to_zip)
+    )
+  }
+)
 
 # 8. Экспорт результатов группировки (НОВАЯ ВЕРСИЯ)
 observeEvent(input$export_groups, {
@@ -1856,8 +1925,6 @@ output$gap_calculation_RESULT <- renderPrint({
                             raw_data = raw_data_reactive,
                             clean_data = cleaned_data_for_comparison,
                             model_type = model_type_reactive)
-
-  
 
   
 
