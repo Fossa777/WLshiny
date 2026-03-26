@@ -244,16 +244,25 @@ create_grouping_sidebar <- function() {
     actionButton("export_groups", "Экспорт в Excel",
                  class = "btn-success",
                  style = "width: 100%; font-weight: bold;"),
- fluidRow(
-  column(3,
-         checkboxInput("show_group_mean", "Показать среднюю линию", value = FALSE),
-         checkboxInput("show_group_ci", "Показать доверительные интервалы", value = FALSE)
+fluidRow(
+  column(6,
+         div(
+           style = "background:#f8f9fa; padding:12px; border-radius:8px; height:100%;",
+           
+           checkboxInput("show_group_mean", "Показать среднюю линию", value = FALSE),
+           checkboxInput("show_group_ci", "Показать доверительный интервал", value = FALSE)
+         )
   ),
-  column(3,
-         conditionalPanel(
-           condition = "input.show_group_ci",
-           sliderInput("group_ci_width", "Ширина доверительного интервала (%)",
-                       min = 5, max = 30, value = 10, step = 5)
+  
+  column(6,
+         div(
+           style = "background:#f8f9fa; padding:12px; border-radius:8px; height:100%;",
+           
+           conditionalPanel(
+             condition = "input.show_group_ci",
+             sliderInput("group_ci_width", "Ширина доверительного интервала (%)",
+                         min = 5, max = 30, value = 10, step = 5)
+           )
          )
   )
 ),
